@@ -1,12 +1,8 @@
 name: Windows Diagnostic Build
 
 on:
-  workflow_dispatch:
-    inputs:
-      target_ref:
-        description: "Branch, tag, or SHA to build"
-        required: true
-        default: "codex/windows-startup-diagnostics"
+  push:
+    branches: [qa/windows-sql-parameter-tooltip]
 
 permissions:
   contents: read
@@ -14,10 +10,15 @@ permissions:
 jobs:
   build-windows-portable:
     runs-on: windows-2022
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_RELEASE_LTO: "off"
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "8"
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.target_ref }}
+          ref: 45925a225bb2468f149506eebc42c89e0c8a0420
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -28,10 +29,10 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.97.1
         with:
           targets: x86_64-pc-windows-msvc
 
@@ -52,7 +53,7 @@ jobs:
           Compress-Archive -Path (Join-Path $portableDir "*") -DestinationPath "DBX-diagnostic-x64-portable.zip" -Force
 
       - name: Upload diagnostic artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: DBX-diagnostic-x64-portable
           path: DBX-diagnostic-x64-portable.zip
